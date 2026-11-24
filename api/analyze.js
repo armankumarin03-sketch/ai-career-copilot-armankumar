@@ -4,7 +4,61 @@ module.exports = async (req, res) => {
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {module.exports = async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: { message: 'Method not allowed' } });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    return res.status(500).json({ error: { message: 'GEMINI_API_KEY is not set in Vercel.' } });
+  }
+
+  let payload;
+  try {
+    payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  } catch (e) {
+    return res.status(400).json({ error: { message: 'Invalid JSON request body.' } });
+  }
+
+  // Fast, low-congestion model first, then standard flash (no long sleep loops that exceed Vercel's 10s limit)
+  const models = ['gemini-3.8-flash-lite', 'gemini-3.8-flash'];
+  let lastData = null;
+  let lastStatus = 500;
+
+  for (const model of models) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return res.status(200).json(data);
+      }
+
+      lastData = data;
+      lastStatus = response.status;
+
+      // Stop immediately if API key is invalid
+      if ([400, 403].includes(response.status)) {
+        return res.status(response.status).json(data);
+      }
+    } catch (error) {
+      lastData = { error: { message: error.message } };
+    }
+  }
+
+  return res.status(lastStatus).json(
+    lastData || { error: { message: 'Service temporarily busy. Please click Analyze again.' } }
+  );
+};
     return res.status(500).json({ error: { message: 'GEMINI_API_KEY is not set in Vercel.' } });
   }
 

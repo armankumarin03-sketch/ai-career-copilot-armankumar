@@ -9,18 +9,20 @@ module.exports = async (req, res) => {
   }
 
   try {
+    const payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
+        body: JSON.stringify(payload)
       }
     );
 
     const data = await response.json();
     return res.status(response.status).json(data);
   } catch (error) {
-    return res.status(500).json({ error: { message: error.message } });
+    return res.status(500).json({ error: { message: error.message || 'Server error' } });
   }
 };

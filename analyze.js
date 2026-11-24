@@ -1,11 +1,11 @@
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: { message: 'Method not allowed' } });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: { message: 'GEMINI_API_KEY is not set in Vercel environment variables.' } });
+    return res.status(500).json({ error: { message: 'GEMINI_API_KEY is not set in Vercel.' } });
   }
 
   try {
@@ -23,4 +23,4 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: { message: error.message } });
   }
-}
+};
